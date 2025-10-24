@@ -224,6 +224,13 @@ for record in TEST:
             "generated_response": f"Error: {str(e)}"
         })
 
+
+
+pd.set_option("display.max_colwidth", None)
+pd.set_option("display.expand_frame_repr", False)
+print(df.to_string(index=False))
+
+
 df = pd.DataFrame(submission_data)
 
 # 🧹 Clean up extra whitespace, newlines, and spacing from responses
