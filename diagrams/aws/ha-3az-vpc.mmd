@@ -1,0 +1,79 @@
+%% AWS HA Architecture: 3 Public + 3 Private Subnets across 3 AZs
+%% View in a Mermaid-enabled editor or render with Mermaid CLI
+
+flowchart TB
+  %% Entry
+  R53["Route 53 (DNS)"] --> ALB
+
+  %% VPC Boundary
+  subgraph VPC["VPC (10.0.0.0/16)"]
+    direction TB
+    IGW[("Internet Gateway")]
+
+    %% Availability Zone 1
+    subgraph AZ1["AZ-1"]
+      direction TB
+      subgraph Pub1["Public Subnet A (10.0.1.0/24)"]
+        NAT1["NAT Gateway A"]
+      end
+      subgraph Priv1["Private Subnet A (10.0.101.0/24)"]
+        EC2A[("EC2 - Auto Scaling")]
+      end
+    end
+
+    %% Availability Zone 2
+    subgraph AZ2["AZ-2"]
+      direction TB
+      subgraph Pub2["Public Subnet B (10.0.2.0/24)"]
+        NAT2["NAT Gateway B"]
+      end
+      subgraph Priv2["Private Subnet B (10.0.102.0/24)"]
+        EC2B[("EC2 - Auto Scaling")]
+      end
+    end
+
+    %% Availability Zone 3
+    subgraph AZ3["AZ-3"]
+      direction TB
+      subgraph Pub3["Public Subnet C (10.0.3.0/24)"]
+        NAT3["NAT Gateway C"]
+      end
+      subgraph Priv3["Private Subnet C (10.0.103.0/24)"]
+        EC2C[("EC2 - Auto Scaling")]
+      end
+    end
+
+    %% Shared, cross-AZ resources inside VPC
+    ALB["Application Load Balancer (internet-facing)"]
+    TG["Target Group"]
+    RDS[("RDS (Multi-AZ)")]
+
+    %% Internet connectivity for Public Subnets
+    IGW --- Pub1
+    IGW --- Pub2
+    IGW --- Pub3
+
+    %% ALB spans Public Subnets (multi-AZ)
+    ALB --- Pub1
+    ALB --- Pub2
+    ALB --- Pub3
+
+    %% Private Subnets use NAT in same AZ (HA, no cross-AZ dependency)
+    Priv1 --> NAT1
+    Priv2 --> NAT2
+    Priv3 --> NAT3
+
+    %% Load Balancing to instances across all AZs
+    ALB --> TG
+    TG --> EC2A
+    TG --> EC2B
+    TG --> EC2C
+
+    %% App tier to DB tier (Multi-AZ for HA)
+    EC2A --> RDS
+    EC2B --> RDS
+    EC2C --> RDS
+  end
+
+  %% DNS entry resolves to ALB
+  R53 --> ALB
