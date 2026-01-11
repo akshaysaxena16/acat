@@ -11,42 +11,54 @@ flowchart LR
   R53 --> WAF[WAF]
   WAF --> CF[CloudFront (CDN)]
   CF --> S3FE[S3 (Static Web Assets)\nHTML/CSS/JS]
-  CF --> ALB[Application Load Balancer\nEKS Ingress]
+  CF --> ALB
 
   %% =========================
-  %% Kubernetes / Microservices
+  %% Networking (VPC)
   %% =========================
-  subgraph EKS[EKS Cluster (Multi-AZ)]
-    IN[Ingress Controller] --> API[API Gateway Service\n(BFF / API)]
+  subgraph VPC[VPC (Multi-AZ)]
+    IGW[Internet Gateway]
 
-    API --> CATALOG[Catalog Service]
-    API --> SEARCH[Search Service]
-    API --> CART[Cart Service]
-    API --> CHECKOUT[Checkout Service]
-    API --> ORDER[Order Service]
-    API --> USER[User/Profile Service]
-    API --> PAY[Payment Orchestrator]
-    API --> NOTIF[Notification Service]
-    API --> RECO[Recommendations Service]
+    subgraph PUB[Public Subnets]
+      ALB[Application Load Balancer\n(EKS Ingress)]
+      NAT[NAT Gateways]
+    end
 
-    %% async/eventing
-    ORDER --> EVT[(Event Publisher)]
-    CHECKOUT --> EVT
-    PAY --> EVT
+    subgraph PRIV[Private Subnets]
+      %% Kubernetes / Microservices
+      subgraph EKS[EKS Cluster (Multi-AZ)]
+        IN[Ingress Controller] --> API[API Gateway Service\n(BFF / API)]
+
+        API --> CATALOG[Catalog Service]
+        API --> SEARCH[Search Service]
+        API --> CART[Cart Service]
+        API --> CHECKOUT[Checkout Service]
+        API --> ORDER[Order Service]
+        API --> USER[User/Profile Service]
+        API --> PAY[Payment Orchestrator]
+        API --> NOTIF[Notification Service]
+        API --> RECO[Recommendations Service]
+
+        %% async/eventing
+        ORDER --> EVT[(Event Publisher)]
+        CHECKOUT --> EVT
+        PAY --> EVT
+      end
+
+      %% Data Stores (Managed)
+      subgraph DATA[Managed Data Stores]
+        AUR[Aurora (PostgreSQL/MySQL)\nOrders / Users]:::db
+        DDB[DynamoDB\nCarts / Sessions]:::db
+        REDIS[ElastiCache (Redis)\nCaching / Rate Limits]:::db
+        OPENSEARCH[OpenSearch\nProduct/Search Index]:::db
+        S3MEDIA[S3 (Media)\nProduct Images]:::db
+      end
+    end
   end
 
-  ALB --> IN
-
-  %% =========================
-  %% Data Stores (Managed)
-  %% =========================
-  subgraph DATA[Managed Data Stores]
-    AUR[Aurora (PostgreSQL/MySQL)\nOrders / Users]:::db
-    DDB[DynamoDB\nCarts / Sessions]:::db
-    REDIS[ElastiCache (Redis)\nCaching / Rate Limits]:::db
-    OPENSEARCH[OpenSearch\nProduct/Search Index]:::db
-    S3MEDIA[S3 (Media)\nProduct Images]:::db
-  end
+  IGW --- PUB
+  PRIV -->|Outbound to AWS/Public Internet| NAT
+  NAT --> IGW
 
   CATALOG --> AUR
   USER --> AUR
@@ -143,17 +155,34 @@ flowchart LR
   %% Primary region (Region A)
   %% -------------------------
   subgraph A[Region A (Primary)]
-    A_S3FE[S3 (Frontend)] --> A_CF_ORIGIN[(CloudFront Origin)]
-    A_ALB[ALB (Ingress)] --> A_EKS[EKS Microservices]
+    A_S3FE[S3 (Frontend)]
 
-    subgraph A_DATA[Region A Data]
-      A_AUR[(Aurora Primary Writer)]
-      A_DDB[(DynamoDB Global Tables)]
-      A_OS[(OpenSearch Domain)]
-      A_REDIS[(ElastiCache Redis)]
-      A_S3DATA[(S3 Data Lake / Backups)]
+    subgraph A_VPC[VPC (Multi-AZ)]
+      A_IGW[Internet Gateway]
+
+      subgraph A_PUB[Public Subnets]
+        A_ALB[ALB (Ingress)]
+        A_NAT[NAT Gateways]
+      end
+
+      subgraph A_PRIV[Private Subnets]
+        A_EKS[EKS Microservices]
+
+        subgraph A_DATA[Region A Data]
+          A_AUR[(Aurora Primary Writer)]
+          A_DDB[(DynamoDB Global Tables)]
+          A_OS[(OpenSearch Domain)]
+          A_REDIS[(ElastiCache Redis)]
+          A_S3DATA[(S3 Data Lake / Backups)]
+        end
+      end
+
+      A_IGW --- A_PUB
+      A_PRIV -->|Outbound| A_NAT
+      A_NAT --> A_IGW
     end
 
+    A_ALB --> A_EKS
     A_EKS --> A_AUR
     A_EKS --> A_DDB
     A_EKS --> A_OS
@@ -165,17 +194,34 @@ flowchart LR
   %% DR region (Region B)
   %% -------------------------
   subgraph B[Region B (DR / Warm Standby)]
-    B_S3FE[S3 (Frontend Replica)] --> B_CF_ORIGIN[(CloudFront Origin)]
-    B_ALB[ALB (Ingress)] --> B_EKS[EKS Microservices\n(Scaled down / Ready)]
+    B_S3FE[S3 (Frontend Replica)]
 
-    subgraph B_DATA[Region B Data]
-      B_AUR[(Aurora Global DB\nSecondary / Reader)]
-      B_DDB[(DynamoDB Global Tables)]
-      B_OS[(OpenSearch\nRestore / CCR)]
-      B_REDIS[(ElastiCache\nRestore from backups)]
-      B_S3DATA[(S3 Replica\n(Data Lake / Backups))]
+    subgraph B_VPC[VPC (Multi-AZ)]
+      B_IGW[Internet Gateway]
+
+      subgraph B_PUB[Public Subnets]
+        B_ALB[ALB (Ingress)]
+        B_NAT[NAT Gateways]
+      end
+
+      subgraph B_PRIV[Private Subnets]
+        B_EKS[EKS Microservices\n(Scaled down / Ready)]
+
+        subgraph B_DATA[Region B Data]
+          B_AUR[(Aurora Global DB\nSecondary / Reader)]
+          B_DDB[(DynamoDB Global Tables)]
+          B_OS[(OpenSearch\nRestore / CCR)]
+          B_REDIS[(ElastiCache\nRestore from backups)]
+          B_S3DATA[(S3 Replica\n(Data Lake / Backups))]
+        end
+      end
+
+      B_IGW --- B_PUB
+      B_PRIV -->|Outbound| B_NAT
+      B_NAT --> B_IGW
     end
 
+    B_ALB --> B_EKS
     B_EKS --> B_AUR
     B_EKS --> B_DDB
     B_EKS --> B_OS
