@@ -1,0 +1,14 @@
+{
+  "stateMachineNameTemplate": "dummy-${ENV}-${ID}",
+  "workflows": [
+    {
+      "id": "dummy-ecs-run-task",
+      "definition": "stepfunctions/definitions/dummy-ecs-run-task.asl.json",
+      "type": "STANDARD",
+      "tags": {
+        "app": "dummy",
+        "managed-by": "github-actions"
+      }
+    }
+  ]
+}
