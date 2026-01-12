@@ -1,0 +1,24 @@
+{
+  "name": "ecommerce-demo",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*",
+    "packages/services/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n catalog,cart,order,web -c blue,magenta,green,yellow \"npm -w @ecom/catalog dev\" \"npm -w @ecom/cart dev\" \"npm -w @ecom/order dev\" \"npm -w @ecom/frontend dev\"",
+    "build": "npm run -ws build",
+    "typecheck": "npm run -ws typecheck",
+    "lint": "npm run -ws lint"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.39.2",
+    "prettier": "^3.7.4",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.52.0"
+  }
+}
