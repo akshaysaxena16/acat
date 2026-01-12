@@ -85,31 +85,40 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_CERT }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Determine definitions to deploy (cert)
+      - name: Determine deploy + delete changes (cert)
         id: changes
         shell: bash
         run: |
           set -euo pipefail
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.mode }}" == "all" ]]; then
-            CHANGED="$(git ls-files 'stepfunctions/definitions/*.asl.json')"
+            DEPLOY_LIST="$(git ls-files 'stepfunctions/definitions/*.asl.json')"
+            DELETE_LIST=""
           else
             BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
-            CHANGED="$(scripts/detect_changed_stepfunctions.sh "$BASE_SHA" "$HEAD_SHA" | sed '/^\s*$/d' || true)"
+            RAW="$(scripts/detect_stepfunctions_changes.sh "$BASE_SHA" "$HEAD_SHA" || true)"
+            DEPLOY_LIST="$(echo "$RAW" | awk -F: '$1=="DEPLOY"{print $2}' | sed '/^\s*$/d' || true)"
+            DELETE_LIST="$(echo "$RAW" | awk -F: '$1=="DELETE"{print $2}' | sed '/^\s*$/d' || true)"
           fi
 
-          echo "Changed definitions:"
-          echo "$CHANGED"
+          echo "Deploy definitions:"
+          echo "$DEPLOY_LIST"
+          echo
+          echo "Delete workflow ids:"
+          echo "$DELETE_LIST"
 
           {
-            echo "changed<<EOF"
-            echo "$CHANGED"
+            echo "deploy<<EOF"
+            echo "$DEPLOY_LIST"
+            echo "EOF"
+            echo "delete<<EOF"
+            echo "$DELETE_LIST"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Deploy changed workflows to cert
-        if: ${{ steps.changes.outputs.changed != '' }}
+        if: ${{ steps.changes.outputs.deploy != '' }}
         shell: bash
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -118,11 +127,25 @@ jobs:
           ENV_NAME: cert
         run: |
           set -euo pipefail
-          chmod +x scripts/deploy_sfn.sh scripts/detect_changed_stepfunctions.sh
+          chmod +x scripts/deploy_sfn.sh scripts/detect_stepfunctions_changes.sh
           while IFS= read -r f; do
             [[ -z "$f" ]] && continue
             scripts/deploy_sfn.sh "$ENV_NAME" "$f"
-          done <<< "${{ steps.changes.outputs.changed }}"
+          done <<< "${{ steps.changes.outputs.deploy }}"
+
+      - name: Delete removed workflows in cert
+        if: ${{ steps.changes.outputs.delete != '' }}
+        shell: bash
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ENV_NAME: cert
+        run: |
+          set -euo pipefail
+          chmod +x scripts/delete_sfn.sh
+          while IFS= read -r id; do
+            [[ -z "$id" ]] && continue
+            scripts/delete_sfn.sh "$ENV_NAME" "$id"
+          done <<< "${{ steps.changes.outputs.delete }}"
 
   deploy-prod:
     # Prod is gated by GitHub Environment approvals (configure in repo settings).
@@ -146,31 +169,40 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_PROD }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Determine definitions to deploy to prod
+      - name: Determine deploy + delete changes (prod)
         id: changes
         shell: bash
         run: |
           set -euo pipefail
 
           if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.mode }}" == "all" ]]; then
-            CHANGED="$(git ls-files 'stepfunctions/definitions/*.asl.json')"
+            DEPLOY_LIST="$(git ls-files 'stepfunctions/definitions/*.asl.json')"
+            DELETE_LIST=""
           else
             BASE_SHA="${{ github.event.before }}"
             HEAD_SHA="${{ github.sha }}"
-            CHANGED="$(scripts/detect_changed_stepfunctions.sh "$BASE_SHA" "$HEAD_SHA" | sed '/^\s*$/d' || true)"
+            RAW="$(scripts/detect_stepfunctions_changes.sh "$BASE_SHA" "$HEAD_SHA" || true)"
+            DEPLOY_LIST="$(echo "$RAW" | awk -F: '$1=="DEPLOY"{print $2}' | sed '/^\s*$/d' || true)"
+            DELETE_LIST="$(echo "$RAW" | awk -F: '$1=="DELETE"{print $2}' | sed '/^\s*$/d' || true)"
           fi
 
-          echo "Definitions:"
-          echo "$CHANGED"
+          echo "Deploy definitions:"
+          echo "$DEPLOY_LIST"
+          echo
+          echo "Delete workflow ids:"
+          echo "$DELETE_LIST"
 
           {
-            echo "changed<<EOF"
-            echo "$CHANGED"
+            echo "deploy<<EOF"
+            echo "$DEPLOY_LIST"
+            echo "EOF"
+            echo "delete<<EOF"
+            echo "$DELETE_LIST"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Deploy to prod
-        if: ${{ steps.changes.outputs.changed != '' }}
+        if: ${{ steps.changes.outputs.deploy != '' }}
         shell: bash
         env:
           AWS_REGION: ${{ secrets.AWS_REGION }}
@@ -179,9 +211,23 @@ jobs:
           ENV_NAME: prod
         run: |
           set -euo pipefail
-          chmod +x scripts/deploy_sfn.sh scripts/detect_changed_stepfunctions.sh
+          chmod +x scripts/deploy_sfn.sh scripts/detect_stepfunctions_changes.sh
           while IFS= read -r f; do
             [[ -z "$f" ]] && continue
             scripts/deploy_sfn.sh "$ENV_NAME" "$f"
-          done <<< "${{ steps.changes.outputs.changed }}"
+          done <<< "${{ steps.changes.outputs.deploy }}"
+
+      - name: Delete removed workflows in prod
+        if: ${{ steps.changes.outputs.delete != '' }}
+        shell: bash
+        env:
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          ENV_NAME: prod
+        run: |
+          set -euo pipefail
+          chmod +x scripts/delete_sfn.sh
+          while IFS= read -r id; do
+            [[ -z "$id" ]] && continue
+            scripts/delete_sfn.sh "$ENV_NAME" "$id"
+          done <<< "${{ steps.changes.outputs.delete }}"
 
