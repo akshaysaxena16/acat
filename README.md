@@ -27,8 +27,8 @@ flowchart TD
   prodPush --> diffProd[Detect changes<br/>DEPLOY + DELETE]
   diffProd --> gateProd[GitHub Environment: prod<br/>required reviewers (approval gate)]
   gateProd --> oidcProd[Configure AWS creds (OIDC)<br/>Assume AWS_ROLE_TO_ASSUME_PROD]
-  oidcProd --> deployProd[Create/Update loop]
-  oidcProd --> deleteProd[Delete loop]
+  oidcProd --> deployProd[Create/Update loop<br/>render ASL → create/update-state-machine<br/>tag-resource + logging/tracing]
+  oidcProd --> deleteProd[Delete loop<br/>delete-state-machine for removed workflows]
 
   manual[workflow_dispatch<br/>inputs: environment=cert|prod<br/>mode=changed|all] --> selectManual[Select definitions<br/>changed: diff-based<br/>all: deploy all (no deletes)]
   selectManual --> gateManual{environment == prod?}
