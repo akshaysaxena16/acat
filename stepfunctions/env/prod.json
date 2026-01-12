@@ -1,0 +1,8 @@
+{
+  "ENV": "prod",
+  "CLUSTER_ARN": "arn:aws:ecs:us-east-1:222222222222:cluster/dummy-prod",
+  "TASK_DEFINITION_ARN": "arn:aws:ecs:us-east-1:222222222222:task-definition/dummy:42",
+  "SUBNETS_JSON": ["subnet-cccc3333", "subnet-dddd4444"],
+  "SECURITY_GROUPS_JSON": ["sg-bbbb2222"],
+  "ASSIGN_PUBLIC_IP": "DISABLED"
+}

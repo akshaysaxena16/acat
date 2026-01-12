@@ -1,0 +1,33 @@
+{
+  "Comment": "Dummy Step Functions definition for CI/CD pipeline testing.",
+  "StartAt": "RunEcsTask",
+  "States": {
+    "RunEcsTask": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::ecs:runTask.sync",
+      "Parameters": {
+        "Cluster": "${CLUSTER_ARN}",
+        "TaskDefinition": "${TASK_DEFINITION_ARN}",
+        "LaunchType": "FARGATE",
+        "NetworkConfiguration": {
+          "AwsvpcConfiguration": {
+            "Subnets": ${SUBNETS_JSON},
+            "SecurityGroups": ${SECURITY_GROUPS_JSON},
+            "AssignPublicIp": "${ASSIGN_PUBLIC_IP}"
+          }
+        },
+        "Overrides": {
+          "ContainerOverrides": [
+            {
+              "Name": "app",
+              "Environment": [
+                { "Name": "ENV", "Value": "${ENV}" }
+              ]
+            }
+          ]
+        }
+      },
+      "End": true
+    }
+  }
+}

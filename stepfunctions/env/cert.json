@@ -1,0 +1,8 @@
+{
+  "ENV": "cert",
+  "CLUSTER_ARN": "arn:aws:ecs:us-east-1:111111111111:cluster/dummy-cert",
+  "TASK_DEFINITION_ARN": "arn:aws:ecs:us-east-1:111111111111:task-definition/dummy:1",
+  "SUBNETS_JSON": ["subnet-aaaa1111", "subnet-bbbb2222"],
+  "SECURITY_GROUPS_JSON": ["sg-aaaa1111"],
+  "ASSIGN_PUBLIC_IP": "DISABLED"
+}
