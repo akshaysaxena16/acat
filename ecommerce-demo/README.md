@@ -26,4 +26,4 @@ Services:
 ## Docs
 
 - Architecture diagram: `../ecommerce-architecture-diagram.md`
-- End-to-end architecture doc (includes HA/DR/DevOps/CI-CD): `docs/end-to-end-architecture.md`
+- End-to-end architecture doc (includes HA/DR/DevOps/CI-CD + AWS setup): `docs/end-to-end-architecture.md`

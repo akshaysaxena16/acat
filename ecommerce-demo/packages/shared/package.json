@@ -1,0 +1,14 @@
+{
+  "name": "@ecom/shared",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "echo \"(shared) lint not configured\"",
+    "build": "echo \"(shared) build not required\""
+  }
+}
+
