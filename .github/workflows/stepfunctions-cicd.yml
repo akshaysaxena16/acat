@@ -7,12 +7,27 @@ on:
       - "scripts/**"
       - ".github/workflows/stepfunctions-cicd.yml"
   push:
-    branches: ["main"]
+    branches: ["cert", "prod"]
     paths:
       - "stepfunctions/**"
       - "scripts/**"
       - ".github/workflows/stepfunctions-cicd.yml"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - cert
+          - prod
+      mode:
+        description: "Deploy mode"
+        required: true
+        type: choice
+        options:
+          - changed
+          - all
 
 permissions:
   contents: read
@@ -50,10 +65,15 @@ jobs:
           done
 
   deploy-cert:
-    if: github.event_name == 'push'
+    if: |
+      (github.event_name == 'push' && github.ref_name == 'cert') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'cert')
     needs: [validate]
     runs-on: ubuntu-latest
     environment: cert
+    concurrency:
+      group: stepfunctions-cert
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -65,14 +85,19 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_CERT }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Detect changed step function definitions
+      - name: Determine definitions to deploy (cert)
         id: changes
         shell: bash
         run: |
           set -euo pipefail
-          BASE_SHA="${{ github.event.before }}"
-          HEAD_SHA="${{ github.sha }}"
-          CHANGED="$(scripts/detect_changed_stepfunctions.sh "$BASE_SHA" "$HEAD_SHA" | sed '/^\s*$/d' || true)"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.mode }}" == "all" ]]; then
+            CHANGED="$(git ls-files 'stepfunctions/definitions/*.asl.json')"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+            CHANGED="$(scripts/detect_changed_stepfunctions.sh "$BASE_SHA" "$HEAD_SHA" | sed '/^\s*$/d' || true)"
+          fi
 
           echo "Changed definitions:"
           echo "$CHANGED"
@@ -99,12 +124,17 @@ jobs:
             scripts/deploy_sfn.sh "$ENV_NAME" "$f"
           done <<< "${{ steps.changes.outputs.changed }}"
 
-  deploy-prod-auto:
+  deploy-prod:
     # Prod is gated by GitHub Environment approvals (configure in repo settings).
-    if: github.event_name == 'push'
-    needs: [validate, deploy-cert]
+    if: |
+      (github.event_name == 'push' && github.ref_name == 'prod') ||
+      (github.event_name == 'workflow_dispatch' && inputs.environment == 'prod')
+    needs: [validate]
     runs-on: ubuntu-latest
     environment: prod
+    concurrency:
+      group: stepfunctions-prod
+      cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
         with:
@@ -121,9 +151,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          BASE_SHA="${{ github.event.before }}"
-          HEAD_SHA="${{ github.sha }}"
-          CHANGED="$(scripts/detect_changed_stepfunctions.sh "$BASE_SHA" "$HEAD_SHA" | sed '/^\s*$/d' || true)"
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" && "${{ inputs.mode }}" == "all" ]]; then
+            CHANGED="$(git ls-files 'stepfunctions/definitions/*.asl.json')"
+          else
+            BASE_SHA="${{ github.event.before }}"
+            HEAD_SHA="${{ github.sha }}"
+            CHANGED="$(scripts/detect_changed_stepfunctions.sh "$BASE_SHA" "$HEAD_SHA" | sed '/^\s*$/d' || true)"
+          fi
 
           echo "Definitions:"
           echo "$CHANGED"
@@ -149,35 +184,4 @@ jobs:
             [[ -z "$f" ]] && continue
             scripts/deploy_sfn.sh "$ENV_NAME" "$f"
           done <<< "${{ steps.changes.outputs.changed }}"
-
-  deploy-prod-manual:
-    # Manual prod deploy (deploys all definitions).
-    if: github.event_name == 'workflow_dispatch'
-    needs: [validate]
-    runs-on: ubuntu-latest
-    environment: prod
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Configure AWS credentials (prod)
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME_PROD }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Deploy all definitions to prod
-        shell: bash
-        env:
-          AWS_REGION: ${{ secrets.AWS_REGION }}
-          SFN_EXECUTION_ROLE_ARN: ${{ secrets.SFN_EXECUTION_ROLE_ARN_PROD }}
-          SFN_LOG_GROUP_ARN: ${{ secrets.SFN_LOG_GROUP_ARN_PROD }}
-          ENV_NAME: prod
-        run: |
-          set -euo pipefail
-          chmod +x scripts/deploy_sfn.sh
-          for f in stepfunctions/definitions/*.asl.json; do
-            scripts/deploy_sfn.sh "$ENV_NAME" "$f"
-          done
 
