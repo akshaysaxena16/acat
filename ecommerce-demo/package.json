@@ -7,7 +7,7 @@
     "packages/services/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n catalog,cart,order,web -c blue,magenta,green,yellow \"npm -w @ecom/catalog dev\" \"npm -w @ecom/cart dev\" \"npm -w @ecom/order dev\" \"npm -w @ecom/frontend dev\"",
+    "dev": "concurrently -k -n catalog,cart,order,web -c blue,magenta,green,yellow \"npm -w @ecom/catalog run dev\" \"npm -w @ecom/cart run dev\" \"npm -w @ecom/order run dev\" \"npm -w @ecom/frontend run dev\"",
     "build": "npm run -ws build",
     "typecheck": "npm run -ws typecheck",
     "lint": "npm run -ws lint"
