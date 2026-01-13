@@ -1,10 +1,8 @@
 import type { Cart, Order, Product } from "@ecom/shared";
 
-const API_BASE = (() => {
-  const raw = (import.meta as unknown as { env?: Record<string, string> })?.env?.VITE_API_BASE_URL;
-  if (!raw) return "";
-  return raw.replace(/\/+$/, "");
-})();
+// Hard-coded AWS ALB API base URL (requested).
+// NOTE: This makes the local frontend call AWS directly (no Vite proxy).
+const API_BASE = "http://k8s-ecommerc-ecommerc-1021125259-104309239.us-east-2.elb.amazonaws.com";
 
 export async function getProducts(): Promise<Product[]> {
   const r = await fetch(`${API_BASE}/api/catalog/products`);
