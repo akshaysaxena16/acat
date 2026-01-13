@@ -4,7 +4,10 @@ WORKDIR /app
 # Copy dependency manifests first (better layer caching)
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/package.json
+COPY packages/frontend/package.json packages/frontend/package.json
+COPY packages/services/cart/package.json packages/services/cart/package.json
 COPY packages/services/catalog/package.json packages/services/catalog/package.json
+COPY packages/services/order/package.json packages/services/order/package.json
 
 RUN npm ci
 
