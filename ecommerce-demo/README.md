@@ -27,3 +27,16 @@ Services:
 
 - Architecture diagram: `../ecommerce-architecture-diagram.md`
 - End-to-end architecture doc (includes HA/DR/DevOps/CI-CD + AWS setup): `docs/end-to-end-architecture.md`
+
+## Docker Hub CI pipeline (build + push)
+
+This repo includes a GitHub Actions workflow that builds and pushes service images to Docker Hub:
+
+- `tedakshay/ecomerce-catalog`
+- `tedakshay/ecomerce-cart`
+- `tedakshay/ecomerce-order`
+
+To enable it, add these GitHub repo secrets:
+
+- `DOCKERHUB_USERNAME`: your Docker Hub username (e.g. `tedakshay`)
+- `DOCKERHUB_TOKEN`: a Docker Hub access token with push permissions
