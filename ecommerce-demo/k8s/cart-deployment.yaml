@@ -16,7 +16,7 @@ spec:
       containers:
         - name: cart
           image: tedakshay/ecomerce-cart:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 4002
           env:

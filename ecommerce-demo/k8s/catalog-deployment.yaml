@@ -18,7 +18,7 @@ spec:
           # Replace with your ECR image URI (example):
           # 123456789012.dkr.ecr.ap-south-1.amazonaws.com/catalog:TAG
           image: tedakshay/ecomerce-catalog:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 4001
           env:

@@ -16,7 +16,7 @@ spec:
       containers:
         - name: order
           image: tedakshay/ecomerce-order:latest
-          imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: 4003
           env:
