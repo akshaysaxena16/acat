@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: order
-          image: REPLACE_ME_ORDER_IMAGE
+          image: tedakshay/ecomerce-order:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4003

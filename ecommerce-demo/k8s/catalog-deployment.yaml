@@ -17,7 +17,7 @@ spec:
         - name: catalog
           # Replace with your ECR image URI (example):
           # 123456789012.dkr.ecr.ap-south-1.amazonaws.com/catalog:TAG
-          image: REPLACE_ME_CATALOG_IMAGE
+          image: tedakshay/ecomerce-catalog:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 4001
