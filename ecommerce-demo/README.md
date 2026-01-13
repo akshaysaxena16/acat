@@ -23,6 +23,19 @@ Services:
 - Cart API: `http://localhost:4002`
 - Order API: `http://localhost:4003`
 
+## Use AWS EKS backend from local frontend
+
+If your backend is deployed behind an ALB Ingress, set `VITE_API_BASE_URL` to your ALB URL.
+
+Example:
+
+```bash
+cd ecommerce-demo/packages/frontend
+cp .env.example .env
+# edit .env and set:
+# VITE_API_BASE_URL=http://<your-alb-dns-name>
+```
+
 ## Docs
 
 - Architecture diagram: `../ecommerce-architecture-diagram.md`
