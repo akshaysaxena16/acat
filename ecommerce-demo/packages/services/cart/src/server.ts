@@ -18,6 +18,7 @@ function getOrCreateCart(userId: string): Cart {
 }
 
 app.get("/health", (_req, res) => res.json({ ok: true, service: "cart" }));
+app.get("/api/cart/health", (_req, res) => res.json({ ok: true, service: "cart" }));
 
 app.get("/api/cart/:userId", (req, res) => {
   const cart = getOrCreateCart(req.params.userId);

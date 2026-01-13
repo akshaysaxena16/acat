@@ -7,6 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ ok: true, service: "catalog" }));
+app.get("/api/catalog/health", (_req, res) => res.json({ ok: true, service: "catalog" }));
 
 app.get("/api/catalog/products", (_req, res) => {
   res.json({ products: PRODUCTS });

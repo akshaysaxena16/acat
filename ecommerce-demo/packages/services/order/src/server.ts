@@ -9,6 +9,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get("/health", (_req, res) => res.json({ ok: true, service: "order" }));
+app.get("/api/order/health", (_req, res) => res.json({ ok: true, service: "order" }));
 
 // Demo: fetch product details from the catalog service for totals.
 async function fetchProduct(productId: string): Promise<Product> {
